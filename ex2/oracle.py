@@ -1,103 +1,92 @@
 import os
 import sys
-from typing import Optional
 
 try:
     from dotenv import load_dotenv
 except ImportError:
-    load_dotenv = None
+    print("[ERROR] python-dotenv is not installed.")
+    print("Install with: pip install python-dotenv")
+    sys.exit(1)
 
 
-REQUIRED_KEYS = (
-    "MATRIX_MODE",
-    "DATABASE_URL",
-    "API_KEY",
-    "LOG_LEVEL",
-    "ZION_ENDPOINT",
-)
-
-
-def mask_secret(value: str) -> str:
-    if len(value) <= 4:
-        return "*" * len(value)
-    return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
-
-
-def load_configuration() -> bool:
-    if load_dotenv is None:
-        print("ERROR: python-dotenv is not installed.")
-        print("Install it with: pip install python-dotenv")
-        return False
+def load_configuration() -> dict[str, str | None]:
     load_dotenv()
-    return True
+
+    config: dict[str, str | None] = {
+        "MATRIX_MODE": os.getenv("MATRIX_MODE"),
+        "DATABASE_URL": os.getenv("DATABASE_URL"),
+        "API_KEY": os.getenv("API_KEY"),
+        "LOG_LEVEL": os.getenv("LOG_LEVEL"),
+        "ZION_ENDPOINT": os.getenv("ZION_ENDPOINT"),
+    }
+
+    return config
 
 
-def get_database_status(database_url: str, mode: str) -> str:
-    if mode == "development":
-        return "Connected to local instance"
-    return f"Connected to production instance ({database_url})"
-
-
-def get_api_status(api_key: str) -> str:
-    if api_key:
-        return f"Authenticated ({mask_secret(api_key)})"
-    return "Missing credentials"
-
-
-def get_zion_status(endpoint: str) -> str:
-    if endpoint.startswith("http"):
-        return f"Online ({endpoint})"
-    return "Offline or invalid endpoint"
-
-
-def validate_mode(mode: str) -> Optional[str]:
-    if mode in ("development", "production"):
-        return None
-    return "MATRIX_MODE must be 'development' or 'production'"
-
-
-def main() -> int:
-    print("ORACLE STATUS: Reading the Matrix...")
-    if not load_configuration():
-        return 1
-
-    print("Configuration loaded:")
+def validate_config(config: dict[str, str | None]) -> bool:
     missing: list[str] = []
-    values: dict[str, str] = {}
 
-    for key in REQUIRED_KEYS:
-        value = os.getenv(key, "").strip()
-        values[key] = value
-        if value == "":
+    for key, value in config.items():
+        if not value:
+            print(f"[ERROR] Missing configuration: {key}")
             missing.append(key)
 
     if missing:
-        print("WARNING: Missing configuration values detected")
-        for key in missing:
-            print(f"[MISSING] {key}")
-        print("Create a .env file from .env.example or export variables.")
-        return 1
+        print("\nConfiguration incomplete. Please check your .env file.")
+        return False
 
-    mode_error = validate_mode(values["MATRIX_MODE"])
-    if mode_error is not None:
-        print(f"ERROR: {mode_error}")
-        return 1
+    return True
 
-    print(f"Mode: {values['MATRIX_MODE']}")
-    print(
-        "Database: "
-        f"{get_database_status(values['DATABASE_URL'], values['MATRIX_MODE'])}"
-    )
-    print(f"API Access: {get_api_status(values['API_KEY'])}")
-    print(f"Log Level: {values['LOG_LEVEL']}")
-    print(f"Zion Network: {get_zion_status(values['ZION_ENDPOINT'])}")
-    print("Environment security check:")
+
+def display_config(config: dict[str, str | None]) -> None:
+    print("Configuration loaded:")
+
+    mode = config["MATRIX_MODE"]
+    db = config["DATABASE_URL"]
+    api = config["API_KEY"]
+    log = config["LOG_LEVEL"]
+    zion = config["ZION_ENDPOINT"]
+
+    print(f"Mode: {mode}")
+
+    if db and "localhost" in db:
+        print("Database: Connected to local instance")
+    else:
+        print("Database: Connected to production database")
+
+    if api:
+        print("API Access: Authenticated")
+
+    print(f"Log Level: {log}")
+
+    if zion:
+        print("Zion Network: Online")
+
+
+def security_check(config: dict[str, str | None]) -> None:
+    print("\nEnvironment security check:")
     print("[OK] No hardcoded secrets detected")
     print("[OK] .env file properly configured")
-    print("[OK] Production overrides available")
-    print("The Oracle sees all configurations.")
-    return 0
+
+    if config["MATRIX_MODE"] == "production":
+        print("[OK] Production overrides available")
+    else:
+        print("[INFO] Running in development mode")
+
+
+def main() -> None:
+    print("ORACLE STATUS: Reading the Matrix...\n")
+
+    config = load_configuration()
+
+    if not validate_config(config):
+        sys.exit(1)
+
+    display_config(config)
+    security_check(config)
+
+    print("\nThe Oracle sees all configurations.")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

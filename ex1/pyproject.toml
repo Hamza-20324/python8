@@ -1,18 +1,20 @@
-[tool.poetry]
-name = "matrix-loading-programs"
+[project]
+name = "hamza"
 version = "0.1.0"
-description = "Exercise 1 for The Matrix subject"
-authors = ["student <student@example.com>"]
+description = ""
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
 readme = "README.md"
-package-mode = false
+requires-python = "3.13"
+dependencies = [
+    "pandas (>=3.0.2,<4.0.0)",
+    "numpy (>=2.4.4,<3.0.0)",
+    "matplotlib (>=3.10.8,<4.0.0)",
+    "requests (>=2.33.1,<3.0.0)"
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
-pandas = ">=2.0.0"
-numpy = ">=1.24.0"
-matplotlib = ">=3.7.0"
-requests = ">=2.31.0"
 
 [build-system]
-requires = ["poetry-core>=1.5.0"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
